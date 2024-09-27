@@ -1,5 +1,6 @@
+// /components/CarList.js
 import React, { useEffect, useState } from 'react';
-import { View, Text, FlatList, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Pressable, StyleSheet } from 'react-native';
 import { getDatabase, ref, onValue, off } from 'firebase/database';
 
 const CarList = ({ navigation }) => {
@@ -47,11 +48,11 @@ const CarList = ({ navigation }) => {
       keyExtractor={(item, index) => carKeys[index]}
       renderItem={({ item, index }) => {
         return (
-          <TouchableOpacity style={styles.container} onPress={() => handleSelectCar(carKeys[index])}>
+          <Pressable style={styles.container} onPress={() => handleSelectCar(carKeys[index])}>
             <Text style={styles.text}>
               {item.brand} {item.model}
             </Text>
-          </TouchableOpacity>
+          </Pressable>
         );
       }}
     />

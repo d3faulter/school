@@ -1,3 +1,4 @@
+// /App.js
 import { FIREBASE_API_KEY, FIREBASE_AUTH_DOMAIN, FIREBASE_DATABASE_URL, FIREBASE_PROJECT_ID, FIREBASE_STORAGE_BUCKET, FIREBASE_MESSAGING_SENDER_ID, FIREBASE_APP_ID } from '@env';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet } from 'react-native';
@@ -6,6 +7,7 @@ import { createStackNavigator } from '@react-navigation/stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { getApps, initializeApp } from "firebase/app";
 import Ionicons from 'react-native-vector-icons/Ionicons';
+
 import CarList from './components/CarList';
 import CarDetails from './components/CarDetails';
 import Add_edit_Car from './components/Add_edit_Car';
