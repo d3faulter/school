@@ -36,3 +36,10 @@ yarn-error.*
 *.tsbuildinfo
 
 app.json
+
+%ProgramData%
+Microsoft
+Windows
+UUS
+State
+_active.uusver
