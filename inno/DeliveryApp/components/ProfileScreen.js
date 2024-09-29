@@ -15,6 +15,8 @@ import Slider from '@react-native-community/slider';
 import { ref, onValue, update } from 'firebase/database';
 import { auth, database } from '../firebaseConfig';
 import { signOut } from 'firebase/auth';
+import { Picker } from '@react-native-picker/picker'; // Updated import
+
 
 const ProfileScreen = ({ navigation }) => {
   // State variables for user preferences
@@ -24,17 +26,16 @@ const ProfileScreen = ({ navigation }) => {
   const [drivingHours, setDrivingHours] = useState(8);
   const [sleepDuration, setSleepDuration] = useState(8);
   const [preferredCountries, setPreferredCountries] = useState('');
-  
+  const [role, setRole] = useState(null);  
   // Loading state to manage asynchronous data fetching
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Get the currently authenticated user
+    // Fetch user data including role
     const user = auth.currentUser;
     if (user) {
       const userRef = ref(database, 'users/' + user.uid);
-      
-      // Listen for changes in the user's preferences
+
       const unsubscribe = onValue(
         userRef,
         (snapshot) => {
@@ -48,6 +49,7 @@ const ProfileScreen = ({ navigation }) => {
             setPreferredCountries(
               data.preferredCountries ? data.preferredCountries.join(', ') : ''
             );
+            setRole(data.role || 'trucker'); // Added role
           }
           setLoading(false);
         },
@@ -58,7 +60,6 @@ const ProfileScreen = ({ navigation }) => {
         }
       );
 
-      // Cleanup the listener on component unmount
       return () => unsubscribe();
     } else {
       setLoading(false);
@@ -73,7 +74,8 @@ const ProfileScreen = ({ navigation }) => {
       !truckType ||
       !fuelEconomy ||
       !cargoSpace ||
-      !preferredCountries
+      !preferredCountries ||
+      !role
     ) {
       Alert.alert('Missing Information', 'Please fill all fields.');
       return;
@@ -89,6 +91,7 @@ const ProfileScreen = ({ navigation }) => {
         drivingHours,
         sleepDuration,
         preferredCountries: preferredCountries.split(',').map(country => country.trim()),
+        role, // Include role
       };
       
       // Update the user's preferences in Firebase
@@ -215,6 +218,19 @@ const ProfileScreen = ({ navigation }) => {
         onChangeText={setPreferredCountries}
       />
 
+      {/* Role Selection */}
+      <Text style={styles.label}>Role</Text>
+      <View style={styles.pickerContainer}>
+        <Picker
+          selectedValue={role}
+          onValueChange={(itemValue) => setRole(itemValue)}
+          style={styles.picker}
+        >
+          <Picker.Item label="Trucker" value="trucker" />
+          <Picker.Item label="Company" value="company" />
+        </Picker>
+      </View>
+
       {/* Save Preferences Button */}
       <Button title="Update Preferences" onPress={savePreferences} />
 
@@ -263,6 +279,16 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 40,
     marginBottom: 20,
+  },
+  pickerContainer: {
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 5,
+    marginBottom: 20,
+  },
+  picker: {
+    height: 50,
+    width: '100%',
   },
   logoutButtonContainer: {
     marginTop: 30,

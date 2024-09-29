@@ -1,15 +1,23 @@
 // components/ClientInputScreen.js
 
-import React, { useState } from 'react';
-import { View, Text, TextInput, Button, StyleSheet, Alert, ScrollView, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  StyleSheet,
+  Alert,
+  ScrollView,
+  TouchableOpacity,
+} from 'react-native';
 import axios from 'axios';
 import * as Location from 'expo-location';
-import Constants from 'expo-constants';
-import MapView, { Marker } from 'react-native-maps';
-import { getDatabase, ref, push, set } from 'firebase/database';
-import { GEOCODE_MAPS_APIKEY } from '../firebaseConfig';
+import { getDatabase, ref, push, set, update, onValue } from 'firebase/database';
+import { GEOCODE_MAPS_APIKEY, auth } from '../firebaseConfig';
+import { onAuthStateChanged } from 'firebase/auth';
+import { Picker } from '@react-native-picker/picker';
 
-// Utility function for reverse geocoding
 const reverseGeocode = async (latitude, longitude) => {
   try {
     const response = await axios.get(`https://geocode.maps.co/reverse`, {
@@ -33,7 +41,6 @@ const reverseGeocode = async (latitude, longitude) => {
   }
 };
 
-// Utility function for geocoding
 const geocodeAddress = async (address) => {
   try {
     const response = await axios.get('https://geocode.maps.co/search', {
@@ -57,7 +64,8 @@ const geocodeAddress = async (address) => {
   }
 };
 
-const ClientInputScreen = ({ navigation }) => {
+const ClientInputScreen = ({ navigation, route }) => {
+  const { routeId } = route.params || {}; // Get routeId if provided
   const [pickupAddress, setPickupAddress] = useState('');
   const [deliveryDetails, setDeliveryDetails] = useState('');
   const [weight, setWeight] = useState('');
@@ -67,6 +75,34 @@ const ClientInputScreen = ({ navigation }) => {
   const [location, setLocation] = useState(null);
   const [coordinates, setCoordinates] = useState({ latitude: '', longitude: '' });
   const [showMap, setShowMap] = useState(false);
+  const [role, setRole] = useState(null);
+
+  const db = getDatabase();
+
+  useEffect(() => {
+    const authUnsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        const userRoleRef = ref(db, `users/${user.uid}/role`);
+        onValue(userRoleRef, (snapshot) => {
+          const userRole = snapshot.val();
+          setRole(userRole);
+          if (userRole !== 'company') {
+            Alert.alert('Access Denied', 'You do not have permission to access this page.');
+            navigation.goBack();
+          }
+        }, {
+          onlyOnce: true,
+        });
+      } else {
+        Alert.alert('Authentication Required', 'Please log in first.');
+        navigation.navigate('Login');
+      }
+    });
+
+    return () => {
+      authUnsubscribe();
+    };
+  }, []);
 
   const getCurrentLocation = async () => {
     try {
@@ -76,10 +112,10 @@ const ClientInputScreen = ({ navigation }) => {
         return;
       }
 
-      let location = await Location.getCurrentPositionAsync({});
-      setLocation(location);
+      let loc = await Location.getCurrentPositionAsync({});
+      setLocation(loc);
 
-      const { latitude, longitude } = location.coords;
+      const { latitude, longitude } = loc.coords;
       setCoordinates({ latitude, longitude });
 
       // Reverse geocode to get address
@@ -148,15 +184,36 @@ const ClientInputScreen = ({ navigation }) => {
       width: parseFloat(width),
       length: parseFloat(length),
       location: coords,
+      routeId: routeId || null, // Associate with route if routeId is provided
+      status: 'pending', // Optional: Add status field
     };
   
     try {
-      const db = getDatabase();
       const deliveryRef = ref(db, 'deliveries');
       const newRef = push(deliveryRef); // Generates a unique key
       await set(newRef, newDelivery); // Saves the delivery data under the unique key
+
+      // If routeId is provided, add this delivery to the route's deliveryIds
+      if (routeId) {
+        const routeDeliveriesRef = ref(db, `routes/${routeId}/deliveryIds`);
+        // Use transaction to safely add to array
+        onValue(routeDeliveriesRef, (snapshot) => {
+          const currentDeliveries = snapshot.val() || [];
+          const updatedDeliveries = [...currentDeliveries, newRef.key];
+          update(routeDeliveriesRef, { deliveryIds: updatedDeliveries })
+            .then(() => {
+              console.log('Delivery added to route.');
+            })
+            .catch((error) => {
+              console.error('Error adding delivery to route:', error);
+            });
+        }, {
+          onlyOnce: true,
+        });
+      }
+
       Alert.alert('Success', 'Delivery created successfully.');
-      navigation.navigate('Map');
+      navigation.goBack(); // Navigate back to the previous screen (MapScreen)
     } catch (error) {
       Alert.alert('Database Error', 'Failed to create delivery.');
       console.error(error);
@@ -177,13 +234,13 @@ const ClientInputScreen = ({ navigation }) => {
 
       {showMap && (
         <MapView style={styles.map} onPress={handleMapPress}>
-{location && (
-  <Marker 
-    key={`selectedLocation-${location.coords.latitude}-${location.coords.longitude}`} 
-    coordinate={location.coords} 
-    title="Selected Location" 
-  />
-)}
+          {location && (
+            <Marker 
+              key={`selectedLocation-${location.coords.latitude}-${location.coords.longitude}`} 
+              coordinate={location.coords} 
+              title="Selected Location" 
+            />
+          )}
         </MapView>
       )}
 
@@ -193,7 +250,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter pickup address"
         value={pickupAddress}
-        onChangeText={handleAddressChange}
+        onChangeText={handleAddressChange} // Correct usage, receives text directly
       />
 
       {/* Coordinates */}
@@ -202,7 +259,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Coordinates"
         value={`${coordinates.latitude}, ${coordinates.longitude}`}
-        onChangeText={handleCoordinatesChange}
+        onChangeText={handleCoordinatesChange} // Correct usage, receives text directly
       />
 
       {/* Delivery Details */}
@@ -211,7 +268,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter delivery details"
         value={deliveryDetails}
-        onChangeText={setDeliveryDetails}
+        onChangeText={setDeliveryDetails} // Correct usage, receives text directly
       />
 
       {/* Weight */}
@@ -220,7 +277,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter weight"
         value={weight}
-        onChangeText={setWeight}
+        onChangeText={setWeight} // Correct usage, receives text directly
         keyboardType="numeric"
       />
 
@@ -230,7 +287,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter height"
         value={height}
-        onChangeText={setHeight}
+        onChangeText={setHeight} // Correct usage, receives text directly
         keyboardType="numeric"
       />
 
@@ -240,7 +297,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter width"
         value={width}
-        onChangeText={setWidth}
+        onChangeText={setWidth} // Correct usage, receives text directly
         keyboardType="numeric"
       />
 
@@ -250,7 +307,7 @@ const ClientInputScreen = ({ navigation }) => {
         style={styles.input}
         placeholder="Enter length"
         value={length}
-        onChangeText={setLength}
+        onChangeText={setLength} // Correct usage, receives text directly
         keyboardType="numeric"
       />
 

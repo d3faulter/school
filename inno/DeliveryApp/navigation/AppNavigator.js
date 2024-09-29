@@ -6,7 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createStackNavigator } from '@react-navigation/stack';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import Ionicons from 'react-native-vector-icons/Ionicons';
-import { SafeAreaView, StyleSheet } from 'react-native';
+import { SafeAreaView, StyleSheet, Text, View } from 'react-native';
+import { getDatabase, ref, onValue } from 'firebase/database';
 
 // Import Screens
 import ClientInputScreen from '../components/ClientInputScreen';
@@ -67,11 +68,24 @@ function AuthStack() {
 
 const AppNavigator = () => {
   const [user, setUser] = useState(null);
+  const [role, setRole] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
+    const db = getDatabase();
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
+      if (currentUser) {
+        const userRoleRef = ref(db, `users/${currentUser.uid}/role`);
+        onValue(userRoleRef, (snapshot) => {
+          const userRole = snapshot.val();
+          setRole(userRole);
+        }, {
+          onlyOnce: true,
+        });
+      } else {
+        setRole(null);
+      }
     });
     return unsubscribe;
   }, []);
@@ -80,29 +94,58 @@ const AppNavigator = () => {
     <SafeAreaView style={styles.safeArea}>
       <NavigationContainer>
         {user ? (
-          <Tab.Navigator
-            screenOptions={({ route }) => ({
-              tabBarIcon: ({ color, size }) => {
-                let iconName;
-                if (route.name === 'Map') {
-                  iconName = 'map';
-                } else if (route.name === 'New Delivery') {
-                  iconName = 'add-circle';
-                } else if (route.name === 'Routes') {
-                  iconName = 'list';
-                } else if (route.name === 'Profile') {
-                  iconName = 'person';
-                }
-                return <Ionicons name={iconName} size={size} color={color} />;
-              },
-              headerShown: false, // Hide the headers for tabs
-            })}
-          >
-            <Tab.Screen name="Map" component={MapStack} />
-            <Tab.Screen name="New Delivery" component={ClientInputScreen} />
-            <Tab.Screen name="Routes" component={RoutesStack} />
-            <Tab.Screen name="Profile" component={ProfileStack} />
-          </Tab.Navigator>
+          role === 'company' ? (
+            <Tab.Navigator
+              screenOptions={({ route }) => ({
+                tabBarIcon: ({ color, size }) => {
+                  let iconName;
+                  if (route.name === 'Map') {
+                    iconName = 'map';
+                  } else if (route.name === 'New Delivery') {
+                    iconName = 'add-circle';
+                  } else if (route.name === 'Routes') {
+                    iconName = 'list';
+                  } else if (route.name === 'Profile') {
+                    iconName = 'person';
+                  }
+                  return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                headerShown: false, // Hide the headers for tabs
+              })}
+            >
+              <Tab.Screen name="Map" component={MapStack} />
+              <Tab.Screen name="New Delivery" component={ClientInputScreen} />
+              <Tab.Screen name="Routes" component={RoutesStack} />
+              <Tab.Screen name="Profile" component={ProfileStack} />
+            </Tab.Navigator>
+          ) : role === 'trucker' ? (
+            <Tab.Navigator
+              screenOptions={({ route }) => ({
+                tabBarIcon: ({ color, size }) => {
+                  let iconName;
+                  if (route.name === 'Map') {
+                    iconName = 'map';
+                  } else if (route.name === 'Routes') {
+                    iconName = 'list';
+                  } else if (route.name === 'Profile') {
+                    iconName = 'person';
+                  }
+                  return <Ionicons name={iconName} size={size} color={color} />;
+                },
+                headerShown: false, // Hide the headers for tabs
+              })}
+            >
+              <Tab.Screen name="Map" component={MapStack} />
+              {/* Truckers do not have access to 'New Delivery' */}
+              <Tab.Screen name="Routes" component={RoutesStack} />
+              <Tab.Screen name="Profile" component={ProfileStack} />
+            </Tab.Navigator>
+          ) : (
+            // If role is not set yet
+            <View style={styles.loadingContainer}>
+              <Text>Loading...</Text>
+            </View>
+          )
         ) : (
           <AuthStack />
         )}
@@ -116,6 +159,11 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
   },
+  loadingContainer: {
+    flex:1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  }
 });
 
 export default AppNavigator;
