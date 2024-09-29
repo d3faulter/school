@@ -15,7 +15,7 @@ import {
 import axios from 'axios';
 import * as Location from 'expo-location';
 import { Picker } from '@react-native-picker/picker';
-import { getDatabase, ref, push, set, update, onValue } from 'firebase/database';
+import { getDatabase, ref, push, set, update, onValue, off } from 'firebase/database';
 import { GEOCODE_MAPS_APIKEY, auth } from '../firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
 import MapView, { Marker } from 'react-native-maps';
@@ -93,32 +93,30 @@ const ClientInputScreen = ({ navigation, route }) => {
     const authUnsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         const userRoleRef = ref(db, `users/${user.uid}/role`);
-        onValue(
-          userRoleRef,
-          (snapshot) => {
-            const userRole = snapshot.val();
-            setRole(userRole);
-            if (userRole !== 'company') {
-              Alert.alert('Access Denied', 'You do not have permission to access this page.');
-              navigation.goBack();
-            }
-          },
-          {
-            onlyOnce: true,
+        const handleRoleChange = (snapshot) => {
+          const userRole = snapshot.val();
+          setRole(userRole);
+          if (userRole !== 'company') {
+            Alert.alert('Access Denied', 'You do not have permission to access this page.');
+            navigation.goBack();
           }
-        );
+        };
+
+        onValue(userRoleRef, handleRoleChange); // Persistent listener
+
+        // Automatically fetch user location on mount
+        getCurrentLocation();
+
+        // Cleanup listener on unmount
+        return () => {
+          off(userRoleRef, 'value', handleRoleChange);
+          authUnsubscribe();
+        };
       } else {
         Alert.alert('Authentication Required', 'Please log in first.');
         navigation.navigate('Login');
       }
     });
-
-    // Automatically fetch user location on mount
-    getCurrentLocation();
-
-    return () => {
-      authUnsubscribe();
-    };
   }, []);
 
   const getCurrentLocation = async () => {
@@ -205,6 +203,12 @@ const ClientInputScreen = ({ navigation, route }) => {
           latitudeDelta: 0.05,
           longitudeDelta: 0.05,
         }, 1000);
+      }
+
+      // Reverse geocode to get the formatted address
+      const formattedAddress = await reverseGeocode(coords.latitude, coords.longitude);
+      if (formattedAddress) {
+        setPickupAddress(formattedAddress);
       }
     }
     setIsGeocoding(false); // End loading
