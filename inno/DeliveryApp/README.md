@@ -2,7 +2,7 @@
 
 1. Kør `npm install` i root for at installere alle dependencies.
 
-2. Opret en `.env`-fil i root med følgende format (kræver man har realtime database og authentication sat op i Firebase samt en api-nøgle til  [GeoCode Free Api](https://geocode.maps.co/) ):
+2. Opret en `.env`-fil i root med følgende format (kræver man har realtime database og authentication sat op i Firebase samt en api-nøgle til  [GeoCode Free Api](https://geocode.maps.co/)):
 
     ```plaintext
     FIREBASE_API_KEY=
