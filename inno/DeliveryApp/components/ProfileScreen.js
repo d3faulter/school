@@ -40,7 +40,15 @@ const ProfileScreen = ({ navigation }) => {
         (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            // ... (set other states)
+            // Set preferences if they exist
+            setTruckType(data.truckType || '');
+            setFuelEconomy(data.fuelEconomy || '');
+            setCargoSpace(data.cargoSpace || '');
+            setDrivingHours(data.drivingHours || 8);
+            setSleepDuration(data.sleepDuration || 8);
+            setPreferredCountries(
+              data.preferredCountries ? data.preferredCountries.join(', ') : ''
+            );
             setRole(data.role || 'trucker'); // Added role
           }
           setLoading(false);

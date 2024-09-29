@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { getDatabase, ref, onValue, update } from 'firebase/database';
+import { getDatabase, ref, onValue, off } from 'firebase/database';
 import { auth } from '../firebaseConfig';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as Location from 'expo-location';
@@ -25,36 +25,34 @@ const MapScreen = ({ navigation }) => {
       return;
     }
 
-    // Fetch user role
+    // Fetch user role with a persistent listener
     const userRoleRef = ref(db, `users/${user.uid}/role`);
-    onValue(
-      userRoleRef,
-      (snapshot) => {
-        const userRole = snapshot.val();
-        setRole(userRole);
-        console.log('MapScreen role:', userRole); // Debugging line
-      },
-      {
-        onlyOnce: true,
-      }
-    );
+    const handleRoleChange = (snapshot) => {
+      const userRole = snapshot.val();
+      setRole(userRole);
+      console.log('MapScreen role:', userRole); // Debugging line
+    };
+
+    onValue(userRoleRef, handleRoleChange); // Persistent listener
 
     // Reference to user's currentRouteId
     const currentRouteIdRef = ref(db, `users/${user.uid}/currentRouteId`);
 
     // Listen for changes to currentRouteId
-    const unsubscribeCurrentRouteId = onValue(currentRouteIdRef, (snapshot) => {
+    const handleCurrentRouteIdChange = (snapshot) => {
       const currentRouteId = snapshot.val();
       if (currentRouteId) {
         fetchCurrentRoute(currentRouteId);
       } else {
         setCurrentRoute(null);
       }
-    });
+    };
+
+    onValue(currentRouteIdRef, handleCurrentRouteIdChange); // Persistent listener
 
     // Fetch all deliveries
     const deliveriesRef = ref(db, 'deliveries');
-    const unsubscribeDeliveries = onValue(deliveriesRef, (snapshot) => {
+    const handleDeliveriesChange = (snapshot) => {
       const data = snapshot.val();
       if (data) {
         const formattedDeliveries = Object.keys(data).map((key) => ({
@@ -65,22 +63,25 @@ const MapScreen = ({ navigation }) => {
       } else {
         setDeliveries([]);
       }
-    });
+    };
+
+    onValue(deliveriesRef, handleDeliveriesChange); // Persistent listener
 
     // Fetch user's current location
     fetchUserLocation();
 
     // Cleanup listeners on unmount
     return () => {
-      unsubscribeCurrentRouteId();
-      unsubscribeDeliveries();
+      off(userRoleRef, 'value', handleRoleChange);
+      off(currentRouteIdRef, 'value', handleCurrentRouteIdChange);
+      off(deliveriesRef, 'value', handleDeliveriesChange);
     };
   }, []);
 
   // Function to fetch current route details
   const fetchCurrentRoute = (routeId) => {
     const routeRef = ref(db, `routes/${routeId}`);
-    onValue(routeRef, (snapshot) => {
+    const handleRouteChange = (snapshot) => {
       const data = snapshot.val();
       if (data && data.coordinates) {
         // Ensure coordinates are in the correct format
@@ -96,10 +97,9 @@ const MapScreen = ({ navigation }) => {
       } else {
         setCurrentRoute(null);
       }
-    }, (error) => {
-      console.error('Error fetching route:', error);
-      Alert.alert('Error', 'Failed to fetch route details.');
-    });
+    };
+
+    onValue(routeRef, handleRouteChange); // Persistent listener
   };
 
   // Function to fetch user's current location
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1EB1FC',
+    backgroundColor: '#2F67B2',
     padding: 10,
     borderRadius: 8,
     opacity: 0.9,
@@ -251,7 +251,7 @@ const styles = StyleSheet.create({
     left: 20,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FF9500',
+    backgroundColor: '#2F67B2',
     padding: 10,
     borderRadius: 8,
     opacity: 0.9,
@@ -266,7 +266,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 20,
     right: 15,
-    backgroundColor: '#1EB1FC',
+    backgroundColor: '#2F67B2',
     padding: 10,
     borderRadius: 25,
     zIndex: 1,
