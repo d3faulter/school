@@ -35,3 +35,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Ignore Windows system directories and temporary files
+/inno/DeliveryApp/%ProgramData%/
