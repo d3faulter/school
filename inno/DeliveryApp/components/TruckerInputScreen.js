@@ -1,4 +1,5 @@
 // components/TruckerInputScreen.js
+
 import React, { useState } from 'react';
 import {
   View,
@@ -8,46 +9,36 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import Slider from '@react-native-community/slider'; // Already installed
+import Slider from '@react-native-community/slider';
 import { ref, set } from 'firebase/database';
 import { auth, database } from '../firebaseConfig';
 
 const TruckerInputScreen = () => {
-  const [truckType, setTruckType] = useState('');
-  const [fuelEconomy, setFuelEconomy] = useState('');
-  const [cargoSpace, setCargoSpace] = useState('');
-  const [drivingHours, setDrivingHours] = useState(8);
-  const [sleepDuration, setSleepDuration] = useState(8);
-  const [preferredCountries, setPreferredCountries] = useState('');
-
-  const savePreferences = () => {
-    if (
-      !truckType ||
-      !fuelEconomy ||
-      !cargoSpace ||
-      !preferredCountries
-    ) {
+  // State variables specific to trucker functionalities
+  const [driverName, setDriverName] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
+  const [experienceYears, setExperienceYears] = useState('');
+  
+  const handleSubmit = () => {
+    if (!driverName || !licenseNumber || !experienceYears) {
       Alert.alert('Missing Information', 'Please fill all fields.');
       return;
     }
 
     const user = auth.currentUser;
     if (user) {
-      const userRef = ref(database, 'users/' + user.uid);
-      set(userRef, {
-        truckType,
-        fuelEconomy,
-        cargoSpace,
-        drivingHours,
-        sleepDuration,
-        preferredCountries: preferredCountries.split(',').map(country => country.trim()), // Assuming input is comma-separated
+      const truckerRef = ref(database, 'truckers/' + user.uid);
+      set(truckerRef, {
+        driverName,
+        licenseNumber,
+        experienceYears: parseInt(experienceYears, 10),
       })
         .then(() => {
-          Alert.alert('Success', 'Preferences saved!');
+          Alert.alert('Success', 'Trucker information saved!');
         })
         .catch((error) => {
           console.error(error);
-          Alert.alert('Error', 'Error saving preferences.');
+          Alert.alert('Error', 'Failed to save trucker information.');
         });
     } else {
       Alert.alert('Authentication Required', 'Please log in first.');
@@ -56,67 +47,78 @@ const TruckerInputScreen = () => {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.label}>Truck Type</Text>
+      <Text style={styles.title}>Trucker Information</Text>
+
+      {/* Driver Name */}
+      <Text style={styles.label}>Driver Name</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter truck type"
-        value={truckType}
-        onChangeText={setTruckType}
+        placeholder="Enter your name"
+        value={driverName}
+        onChangeText={setDriverName}
       />
 
-      <Text style={styles.label}>Fuel Economy (km/l)</Text>
+      {/* License Number */}
+      <Text style={styles.label}>License Number</Text>
       <TextInput
         style={styles.input}
-        placeholder="Enter fuel economy"
-        value={fuelEconomy}
-        onChangeText={setFuelEconomy}
-        keyboardType="numeric"
+        placeholder="Enter license number"
+        value={licenseNumber}
+        onChangeText={setLicenseNumber}
       />
 
-      <Text style={styles.label}>Cargo Space (m³)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="Enter cargo space"
-        value={cargoSpace}
-        onChangeText={setCargoSpace}
-        keyboardType="numeric"
-      />
-
-      <Text style={styles.label}>Preferred Driving Hours per Day: {drivingHours}</Text>
+      {/* Experience Years */}
+      <Text style={styles.label}>Years of Experience: {experienceYears}</Text>
       <Slider
-        minimumValue={4}
-        maximumValue={12}
+        minimumValue={0}
+        maximumValue={40}
         step={1}
-        value={drivingHours}
-        onValueChange={setDrivingHours}
+        value={experienceYears}
+        onValueChange={setExperienceYears}
+        style={styles.slider}
+        minimumTrackTintColor="#1EB1FC"
+        maximumTrackTintColor="#d3d3d3"
+        thumbTintColor="#1EB1FC"
       />
 
-      <Text style={styles.label}>Sleep Duration (hours): {sleepDuration}</Text>
-      <Slider
-        minimumValue={4}
-        maximumValue={12}
-        step={1}
-        value={sleepDuration}
-        onValueChange={setSleepDuration}
-      />
-
-      <Text style={styles.label}>Preferred Countries (comma-separated)</Text>
-      <TextInput
-        style={styles.input}
-        placeholder="e.g., Germany, France"
-        value={preferredCountries}
-        onChangeText={setPreferredCountries}
-      />
-
-      <Button title="Save Preferences" onPress={savePreferences} />
+      {/* Save Trucker Information Button */}
+      <Button title="Save Information" onPress={handleSubmit} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20 },
-  label: { marginTop: 20, fontWeight: 'bold' },
-  input: { borderWidth: 1, padding: 10, marginTop: 10, borderRadius: 5 },
+  container: { 
+    flex: 1, 
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+    justifyContent: 'center',
+  },
+  title: { 
+    fontSize: 24, 
+    marginBottom: 20, 
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  label: { 
+    fontSize: 16, 
+    marginBottom: 5,
+    color: '#333',
+  },
+  input: { 
+    height: 40, 
+    borderColor: '#ccc', 
+    borderWidth: 1, 
+    marginBottom: 20, 
+    paddingHorizontal: 10, 
+    borderRadius: 5,
+    backgroundColor: '#fff',
+  },
+  slider: {
+    width: '100%',
+    height: 40,
+    marginBottom: 20,
+  },
 });
 
 export default TruckerInputScreen;

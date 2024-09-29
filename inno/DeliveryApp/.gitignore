@@ -32,9 +32,39 @@ yarn-error.*
 .env*.local
 .env
 
-
 # typescript
 *.tsbuildinfo
 
-# Ignore Windows system directories and temporary files
+# Windows system directories and temporary files
 /inno/DeliveryApp/%ProgramData%/
+
+# Expo specific
+.expo/
+.expo-shared/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+
+# IDE settings
+.vscode/
+.idea/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+
+# Build directories
+/dist/
+build/

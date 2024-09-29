@@ -1,4 +1,5 @@
 // navigation/AppNavigator.js
+
 import React, { useState, useEffect } from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -7,6 +8,7 @@ import { getAuth, onAuthStateChanged } from 'firebase/auth';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import { SafeAreaView, StyleSheet } from 'react-native';
 
+// Import Screens
 import ClientInputScreen from '../components/ClientInputScreen';
 import MapScreen from '../components/MapScreen';
 import TruckerInputScreen from '../components/TruckerInputScreen';
@@ -16,9 +18,12 @@ import LoginScreen from '../components/LoginScreen';
 import RegisterScreen from '../components/RegisterScreen';
 import OptimizeRoutesScreen from '../components/OptimizeRoutesScreen'; 
 import SelectRouteScreen from '../components/SelectRouteScreen'; 
+import ProfileScreen from '../components/ProfileScreen';
 
 const Stack = createStackNavigator();
+const Tab = createBottomTabNavigator();
 
+// Map Stack
 function MapStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -28,6 +33,7 @@ function MapStack() {
   );
 }
 
+// Routes Stack
 function RoutesStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -38,23 +44,34 @@ function RoutesStack() {
     </Stack.Navigator>
   );
 }
+
+// Profile Stack
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="ProfileHome" component={TruckerInputScreen} />
+      <Stack.Screen name="ProfileHome" component={ProfileScreen} />
+      {/* Add more profile-related screens here if necessary */}
     </Stack.Navigator>
   );
 }
 
-const Tab = createBottomTabNavigator();
+// Auth Stack
+function AuthStack() {
+  return (
+    <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+      <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
+    </Stack.Navigator>
+  );
+}
 
 const AppNavigator = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
     const auth = getAuth();
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
     });
     return unsubscribe;
   }, []);
@@ -69,16 +86,16 @@ const AppNavigator = () => {
                 let iconName;
                 if (route.name === 'Map') {
                   iconName = 'map';
-                } else if (route.name === 'Profile') {
-                  iconName = 'person';
                 } else if (route.name === 'New Delivery') {
                   iconName = 'add-circle';
                 } else if (route.name === 'Routes') {
                   iconName = 'list';
+                } else if (route.name === 'Profile') {
+                  iconName = 'person';
                 }
                 return <Ionicons name={iconName} size={size} color={color} />;
               },
-              headerShown: false, // Hide the larger headers
+              headerShown: false, // Hide the headers for tabs
             })}
           >
             <Tab.Screen name="Map" component={MapStack} />
@@ -87,10 +104,7 @@ const AppNavigator = () => {
             <Tab.Screen name="Profile" component={ProfileStack} />
           </Tab.Navigator>
         ) : (
-          <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
-            <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
-          </Stack.Navigator>
+          <AuthStack />
         )}
       </NavigationContainer>
     </SafeAreaView>
