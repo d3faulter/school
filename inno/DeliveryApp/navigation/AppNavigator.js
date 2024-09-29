@@ -14,8 +14,8 @@ import RouteDetailsScreen from '../components/RouteDetailsScreen';
 import RoutesScreen from '../components/RoutesScreen';
 import LoginScreen from '../components/LoginScreen';
 import RegisterScreen from '../components/RegisterScreen';
-import OptimizeRoutesScreen from '../components/OptimizeRoutesScreen';
-import SelectRouteScreen from '../components/SelectRouteScreen';
+import OptimizeRoutesScreen from '../components/OptimizeRoutesScreen'; 
+import SelectRouteScreen from '../components/SelectRouteScreen'; 
 
 const Stack = createStackNavigator();
 
@@ -38,7 +38,6 @@ function RoutesStack() {
     </Stack.Navigator>
   );
 }
-
 function ProfileStack() {
   return (
     <Stack.Navigator screenOptions={{ headerShown: false }}>
@@ -49,7 +48,7 @@ function ProfileStack() {
 
 const Tab = createBottomTabNavigator();
 
-function AppNavigator() {
+const AppNavigator = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -60,40 +59,49 @@ function AppNavigator() {
     return unsubscribe;
   }, []);
 
-  if (!user) {
-    return (
-      <NavigationContainer>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    );
-  }
-
   return (
-    <NavigationContainer>
-      <Tab.Navigator
-        screenOptions={({ route }) => ({
-          tabBarIcon: ({ color, size }) => {
-            let iconName;
-            if (route.name === 'Map') {
-              iconName = 'map';
-            } else if (route.name === 'Routes') {
-              iconName = 'list';
-            } else if (route.name === 'Profile') {
-              iconName = 'person';
-            }
-            return <Ionicons name={iconName} size={size} color={color} />;
-          },
-        })}
-      >
-        <Tab.Screen name="Map" component={MapStack} />
-        <Tab.Screen name="Routes" component={RoutesStack} />
-        <Tab.Screen name="Profile" component={ProfileStack} />
-      </Tab.Navigator>
-    </NavigationContainer>
+    <SafeAreaView style={styles.safeArea}>
+      <NavigationContainer>
+        {user ? (
+          <Tab.Navigator
+            screenOptions={({ route }) => ({
+              tabBarIcon: ({ color, size }) => {
+                let iconName;
+                if (route.name === 'Map') {
+                  iconName = 'map';
+                } else if (route.name === 'Profile') {
+                  iconName = 'person';
+                } else if (route.name === 'New Delivery') {
+                  iconName = 'add-circle';
+                } else if (route.name === 'Routes') {
+                  iconName = 'list';
+                }
+                return <Ionicons name={iconName} size={size} color={color} />;
+              },
+              headerShown: false, // Hide the larger headers
+            })}
+          >
+            <Tab.Screen name="Map" component={MapStack} />
+            <Tab.Screen name="New Delivery" component={ClientInputScreen} />
+            <Tab.Screen name="Routes" component={RoutesStack} />
+            <Tab.Screen name="Profile" component={ProfileStack} />
+          </Tab.Navigator>
+        ) : (
+          <Stack.Navigator initialRouteName="Login" screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="Login" component={LoginScreen} options={{ title: 'Login' }} />
+            <Stack.Screen name="Register" component={RegisterScreen} options={{ title: 'Register' }} />
+          </Stack.Navigator>
+        )}
+      </NavigationContainer>
+    </SafeAreaView>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+});
 
 export default AppNavigator;
