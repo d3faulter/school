@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, Button, StyleSheet, Alert } from 'react-native';
-import { Picker } from '@react-native-picker/picker'; // Updated import
+import { Picker } from '@react-native-picker/picker';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { getDatabase, ref, set } from 'firebase/database';
 
@@ -41,7 +41,8 @@ const RegisterScreen = ({ navigation }) => {
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
       
-      <Text>Email</Text>
+      {/* Email Input */}
+      <Text style={styles.inputLabel}>Email</Text>
       <TextInput
         style={styles.input}
         placeholder="Enter your email"
@@ -51,7 +52,8 @@ const RegisterScreen = ({ navigation }) => {
         keyboardType="email-address"
       />
       
-      <Text>Password</Text>
+      {/* Password Input */}
+      <Text style={styles.inputLabel}>Password</Text>
       <TextInput
         style={styles.input}
         placeholder="Enter your password"
@@ -60,7 +62,8 @@ const RegisterScreen = ({ navigation }) => {
         secureTextEntry
       />
       
-      <Text>Repeat Password</Text>
+      {/* Confirm Password Input */}
+      <Text style={styles.inputLabel}>Repeat Password</Text>
       <TextInput
         style={styles.input}
         placeholder="Confirm your password"
@@ -69,43 +72,79 @@ const RegisterScreen = ({ navigation }) => {
         secureTextEntry
       />
       
-      <Text>Register As:</Text>
+      {/* Role Selection */}
+      <Text style={styles.label}>Register As:</Text>
       <View style={styles.pickerContainer}>
         <Picker
           selectedValue={role}
           onValueChange={(itemValue) => setRole(itemValue)}
           style={styles.picker}
+          itemStyle={styles.pickerItem} // For iOS
         >
           <Picker.Item label="Trucker" value="trucker" />
           <Picker.Item label="Company" value="company" />
         </Picker>
       </View>
       
+      {/* Register Button */}
       <Button title="Register" onPress={handleRegister} />
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, justifyContent: 'center', padding: 20 },
-  title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
+  container: { 
+    flexGrow: 1, 
+    justifyContent: 'center', 
+    padding: 20,
+    backgroundColor: '#f9f9f9',
+  },
+  title: { 
+    fontSize: 24, 
+    marginBottom: 20, 
+    textAlign: 'center',
+    fontWeight: 'bold',
+  },
+  inputLabel: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
+  },
   input: { 
     height: 40, 
-    borderColor: 'gray', 
+    borderColor: '#ccc', 
     borderWidth: 1, 
     marginBottom: 20, 
     paddingHorizontal: 10, 
-    borderRadius: 5 
+    borderRadius: 5,
+    backgroundColor: '#fff',
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 5,
+    color: '#333',
   },
   pickerContainer: {
     borderColor: 'gray',
-    borderWidth: 1,
+    borderWidth: 0,
     borderRadius: 5,
     marginBottom: 20,
+    overflow: 'hidden',
+    backgroundColor: '#fff', // Ensure background is white
   },
   picker: {
     height: 50,
     width: '100%',
+    color: '#000', // Set text color to black
+  },
+  pickerItem: {
+    height: 50,
+    color: '#000', // For iOS Picker items
+  },
+  logoutButtonContainer: {
+    marginTop: 30,
+    alignSelf: 'center',
+    width: '60%',
   },
 });
 

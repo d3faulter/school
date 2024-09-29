@@ -1,4 +1,5 @@
 // components/RouteDetailsScreen.js
+
 import React from 'react';
 import { View, Text, StyleSheet, Button, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
@@ -40,20 +41,20 @@ const RouteDetailsScreen = ({ route, navigation }) => {
       <MapView style={styles.map}>
         {/* Display pickup location */}
         <Marker
-  key={delivery.id} // Ensure delivery.id is unique
-  coordinate={{
-    latitude: delivery.location ? delivery.location.latitude : 0,
-    longitude: delivery.location ? delivery.location.longitude : 0,
-  }}
-  title={delivery.deliveryDetails}
-  description={delivery.address}
-/>
-        {/* You can add more markers or polylines as needed */}
+          key={`routeDelivery-${delivery.id}`} // Prefix added
+          coordinate={{
+            latitude: delivery.location ? delivery.location.latitude : 0,
+            longitude: delivery.location ? delivery.location.longitude : 0,
+          }}
+          title={delivery.deliveryDetails}
+          description={delivery.pickupAddress}
+        />
+        {/* Add more markers or polylines as needed */}
       </MapView>
       <View style={styles.details}>
         <Text style={styles.title}>Route Details</Text>
         <Text style={styles.detailText}>Delivery Details: {delivery.deliveryDetails}</Text>
-        <Text style={styles.detailText}>Pickup Address: {delivery.address}</Text>
+        <Text style={styles.detailText}>Pickup Address: {delivery.pickupAddress}</Text>
         {/* Add more details as needed */}
         <Button title="Accept Route" onPress={acceptRoute} />
       </View>

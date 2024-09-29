@@ -1,9 +1,9 @@
 // components/MapScreen.js
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, StyleSheet, TouchableOpacity, Text, Alert } from 'react-native';
 import MapView, { Marker, Polyline } from 'react-native-maps';
-import { getDatabase, ref, onValue, query, orderByChild, equalTo, update } from 'firebase/database';
+import { getDatabase, ref, onValue, update } from 'firebase/database';
 import { auth } from '../firebaseConfig';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import * as Location from 'expo-location';
@@ -16,6 +16,7 @@ const MapScreen = ({ navigation }) => {
   const [role, setRole] = useState(null); // To determine if user is trucker or company
 
   const db = getDatabase();
+  const mapRef = useRef(null); // Reference to MapView
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -26,12 +27,17 @@ const MapScreen = ({ navigation }) => {
 
     // Fetch user role
     const userRoleRef = ref(db, `users/${user.uid}/role`);
-    onValue(userRoleRef, (snapshot) => {
-      const userRole = snapshot.val();
-      setRole(userRole);
-    }, {
-      onlyOnce: true,
-    });
+    onValue(
+      userRoleRef,
+      (snapshot) => {
+        const userRole = snapshot.val();
+        setRole(userRole);
+        console.log('MapScreen role:', userRole); // Debugging line
+      },
+      {
+        onlyOnce: true,
+      }
+    );
 
     // Reference to user's currentRouteId
     const currentRouteIdRef = ref(db, `users/${user.uid}/currentRouteId`);
@@ -76,14 +82,23 @@ const MapScreen = ({ navigation }) => {
     const routeRef = ref(db, `routes/${routeId}`);
     onValue(routeRef, (snapshot) => {
       const data = snapshot.val();
-      if (data) {
+      if (data && data.coordinates) {
+        // Ensure coordinates are in the correct format
+        const formattedCoordinates = data.coordinates.map((coord) => ({
+          latitude: coord.latitude, // Adjust based on your data structure
+          longitude: coord.longitude,
+        }));
         setCurrentRoute({
           id: routeId,
           ...data,
+          coordinates: formattedCoordinates,
         });
       } else {
         setCurrentRoute(null);
       }
+    }, (error) => {
+      console.error('Error fetching route:', error);
+      Alert.alert('Error', 'Failed to fetch route details.');
     });
   };
 
@@ -97,13 +112,23 @@ const MapScreen = ({ navigation }) => {
       }
 
       const location = await Location.getCurrentPositionAsync({});
-      setUserLocation({
+      const coords = {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
-      });
+      };
+      setUserLocation(coords);
+
+      // Center the map on user location initially
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          ...coords,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
+      }
     } catch (error) {
       Alert.alert('Location Error', 'Failed to get current location.');
-      console.error(error);
+      console.error('Location Fetch Error:', error);
     }
   };
 
@@ -121,22 +146,40 @@ const MapScreen = ({ navigation }) => {
     navigation.navigate('New Delivery', { routeId: currentRoute.id });
   };
 
+  // Function to center map on user location
+  const centerOnUser = () => {
+    if (userLocation && mapRef.current) {
+      mapRef.current.animateToRegion({
+        ...userLocation,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
+    }
+  };
+
   // Filtered deliveries based on toggle
-  const filteredDeliveries = showCurrentRouteOnly && currentRoute
-    ? deliveries.filter(delivery => delivery.routeId === currentRoute.id)
-    : deliveries;
+  const filteredDeliveries =
+    showCurrentRouteOnly && currentRoute
+      ? deliveries.filter((delivery) => delivery.routeId === currentRoute.id)
+      : deliveries;
 
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
         style={styles.map}
         showsUserLocation={true}
-        followsUserLocation={true}
-        showsMyLocationButton={true}
+        showsMyLocationButton={false}
+        initialRegion={{
+          latitude: userLocation ? userLocation.latitude : 37.78825,
+          longitude: userLocation ? userLocation.longitude : -122.4324,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}
       >
         {filteredDeliveries.map((delivery) => (
           <Marker
-            key={delivery.id}
+            key={`delivery-${delivery.id}`} // Prefix added
             coordinate={{
               latitude: delivery.location ? delivery.location.latitude : 0,
               longitude: delivery.location ? delivery.location.longitude : 0,
@@ -148,11 +191,7 @@ const MapScreen = ({ navigation }) => {
         ))}
 
         {currentRoute && currentRoute.coordinates && (
-          <Polyline
-            coordinates={currentRoute.coordinates}
-            strokeColor="#1EB1FC"
-            strokeWidth={3}
-          />
+          <Polyline coordinates={currentRoute.coordinates} strokeColor="#1EB1FC" strokeWidth={3} />
         )}
       </MapView>
 
@@ -173,16 +212,21 @@ const MapScreen = ({ navigation }) => {
           <Text style={styles.buttonText}>Add to Route</Text>
         </TouchableOpacity>
       )}
+
+      {/* Center on User Location Button */}
+      <TouchableOpacity style={styles.centerButton} onPress={centerOnUser}>
+        <Ionicons name="locate" size={24} color="#fff" />
+      </TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
+  container: {
+    flex: 1,
   },
-  map: { 
-    flex: 1, 
+  map: {
+    flex: 1,
   },
   toggleButton: {
     position: 'absolute',
@@ -193,7 +237,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#1EB1FC',
     padding: 10,
     borderRadius: 8,
-    opacity: 0.8,
+    opacity: 0.9,
+    zIndex: 1, // Ensure it's above the map
+    elevation: 5, // For Android
+    shadowColor: '#000', // For iOS
+    shadowOffset: { width: 0, height: 2 }, // For iOS
+    shadowOpacity: 0.3, // For iOS
+    shadowRadius: 2, // For iOS
   },
   addButton: {
     position: 'absolute',
@@ -204,7 +254,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF9500',
     padding: 10,
     borderRadius: 8,
-    opacity: 0.8,
+    opacity: 0.9,
+    zIndex: 1, // Ensure it's above the map
+    elevation: 5, // For Android
+    shadowColor: '#000', // For iOS
+    shadowOffset: { width: 0, height: 2 }, // For iOS
+    shadowOpacity: 0.3, // For iOS
+    shadowRadius: 2, // For iOS
+  },
+  centerButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 15,
+    backgroundColor: '#1EB1FC',
+    padding: 10,
+    borderRadius: 25,
+    zIndex: 1,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
   },
   buttonText: {
     color: '#fff',

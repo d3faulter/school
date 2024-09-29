@@ -12,11 +12,10 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
+import { Picker } from '@react-native-picker/picker'; // Correct import
 import { ref, onValue, update } from 'firebase/database';
 import { auth, database } from '../firebaseConfig';
 import { signOut } from 'firebase/auth';
-import { Picker } from '@react-native-picker/picker'; // Updated import
-
 
 const ProfileScreen = ({ navigation }) => {
   // State variables for user preferences
@@ -41,14 +40,7 @@ const ProfileScreen = ({ navigation }) => {
         (snapshot) => {
           const data = snapshot.val();
           if (data) {
-            setTruckType(data.truckType || '');
-            setFuelEconomy(data.fuelEconomy || '');
-            setCargoSpace(data.cargoSpace || '');
-            setDrivingHours(data.drivingHours || 8);
-            setSleepDuration(data.sleepDuration || 8);
-            setPreferredCountries(
-              data.preferredCountries ? data.preferredCountries.join(', ') : ''
-            );
+            // ... (set other states)
             setRole(data.role || 'trucker'); // Added role
           }
           setLoading(false);
@@ -225,6 +217,7 @@ const ProfileScreen = ({ navigation }) => {
           selectedValue={role}
           onValueChange={(itemValue) => setRole(itemValue)}
           style={styles.picker}
+          itemStyle={styles.pickerItem} // For iOS
         >
           <Picker.Item label="Trucker" value="trucker" />
           <Picker.Item label="Company" value="company" />
@@ -243,58 +236,59 @@ const ProfileScreen = ({ navigation }) => {
 };
 
 const styles = StyleSheet.create({
-  container: { 
-    flexGrow: 1, 
-    justifyContent: 'center', 
-    padding: 20,
-    backgroundColor: '#f9f9f9',
-  },
-  loadingContainer: { 
-    flex: 1, 
-    justifyContent: 'center', 
-    alignItems: 'center',
-    backgroundColor: '#f9f9f9',
-  },
-  title: { 
-    fontSize: 24, 
-    marginBottom: 20, 
-    textAlign: 'center',
-    fontWeight: 'bold',
-  },
-  label: { 
-    fontSize: 16, 
-    marginBottom: 5,
-    color: '#333',
-  },
-  input: { 
-    height: 40, 
-    borderColor: '#ccc', 
-    borderWidth: 1, 
-    marginBottom: 20, 
-    paddingHorizontal: 10, 
-    borderRadius: 5,
-    backgroundColor: '#fff',
-  },
-  slider: {
-    width: '100%',
-    height: 40,
-    marginBottom: 20,
-  },
-  pickerContainer: {
-    borderColor: 'gray',
-    borderWidth: 1,
-    borderRadius: 5,
-    marginBottom: 20,
-  },
-  picker: {
-    height: 50,
-    width: '100%',
-  },
-  logoutButtonContainer: {
-    marginTop: 30,
-    alignSelf: 'center',
-    width: '60%',
-  },
-});
+    container: { 
+      flexGrow: 1, 
+      justifyContent: 'center', 
+      padding: 20,
+      backgroundColor: '#f9f9f9',
+    },
+    title: { 
+      fontSize: 24, 
+      marginBottom: 20, 
+      textAlign: 'center',
+      fontWeight: 'bold',
+    },
+    inputLabel: {
+      fontSize: 16,
+      marginBottom: 5,
+      color: '#333',
+    },
+    input: { 
+      height: 40, 
+      borderColor: '#ccc', 
+      borderWidth: 1, 
+      marginBottom: 20, 
+      paddingHorizontal: 10, 
+      borderRadius: 5,
+      backgroundColor: '#fff',
+    },
+    label: {
+      fontSize: 16,
+      marginBottom: 5,
+      color: '#333',
+    },
+    pickerContainer: {
+      borderColor: 'gray',
+      borderWidth: 0,
+      borderRadius: 5,
+      marginBottom: 20,
+      overflow: 'hidden',
+      backgroundColor: '#fff', // Ensure background is white
+    },
+    picker: {
+      height: 50,
+      width: '100%',
+      color: '#000', // Set text color to black
+    },
+    pickerItem: {
+      height: 50,
+      color: '#000', // For iOS Picker items
+    },
+    logoutButtonContainer: {
+      marginTop: 30,
+      alignSelf: 'center',
+      width: '60%',
+    },
+  });
 
 export default ProfileScreen;

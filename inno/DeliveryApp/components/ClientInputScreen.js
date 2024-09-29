@@ -1,6 +1,6 @@
 // components/ClientInputScreen.js
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,13 +10,15 @@ import {
   Alert,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import axios from 'axios';
 import * as Location from 'expo-location';
+import { Picker } from '@react-native-picker/picker';
 import { getDatabase, ref, push, set, update, onValue } from 'firebase/database';
 import { GEOCODE_MAPS_APIKEY, auth } from '../firebaseConfig';
 import { onAuthStateChanged } from 'firebase/auth';
-import { Picker } from '@react-native-picker/picker';
+import MapView, { Marker } from 'react-native-maps';
 
 const reverseGeocode = async (latitude, longitude) => {
   try {
@@ -28,8 +30,13 @@ const reverseGeocode = async (latitude, longitude) => {
       },
     });
 
-    if (response.data && response.data.display_name) {
-      return response.data.display_name;
+    if (response.data && response.data.address) {
+      const { house_number, road, postcode, city, country } = response.data.address;
+
+      // Construct the formatted address as per your specification
+      const formattedAddress = `${road ? road + ' ' : ''}${house_number ? house_number + ', ' : ''}${postcode ? postcode + ' ' : ''}${city ? city + ', ' : ''}${country ? country : ''}`.trim();
+
+      return formattedAddress;
     } else {
       Alert.alert('Reverse Geocoding Error', 'No address found for the provided coordinates.');
       return null;
@@ -76,28 +83,38 @@ const ClientInputScreen = ({ navigation, route }) => {
   const [coordinates, setCoordinates] = useState({ latitude: '', longitude: '' });
   const [showMap, setShowMap] = useState(false);
   const [role, setRole] = useState(null);
+  const [isGeocoding, setIsGeocoding] = useState(false); // Loading state for geocoding
+  const [mapMarker, setMapMarker] = useState(null); // To control marker on the map
 
   const db = getDatabase();
+  const mapRef = useRef(null); // Reference to MapView
 
   useEffect(() => {
     const authUnsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) {
         const userRoleRef = ref(db, `users/${user.uid}/role`);
-        onValue(userRoleRef, (snapshot) => {
-          const userRole = snapshot.val();
-          setRole(userRole);
-          if (userRole !== 'company') {
-            Alert.alert('Access Denied', 'You do not have permission to access this page.');
-            navigation.goBack();
+        onValue(
+          userRoleRef,
+          (snapshot) => {
+            const userRole = snapshot.val();
+            setRole(userRole);
+            if (userRole !== 'company') {
+              Alert.alert('Access Denied', 'You do not have permission to access this page.');
+              navigation.goBack();
+            }
+          },
+          {
+            onlyOnce: true,
           }
-        }, {
-          onlyOnce: true,
-        });
+        );
       } else {
         Alert.alert('Authentication Required', 'Please log in first.');
         navigation.navigate('Login');
       }
     });
+
+    // Automatically fetch user location on mount
+    getCurrentLocation();
 
     return () => {
       authUnsubscribe();
@@ -108,7 +125,7 @@ const ClientInputScreen = ({ navigation, route }) => {
     try {
       let { status } = await Location.requestForegroundPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission to access location was denied');
+        Alert.alert('Permission Denied', 'Permission to access location was denied');
         return;
       }
 
@@ -119,9 +136,24 @@ const ClientInputScreen = ({ navigation, route }) => {
       setCoordinates({ latitude, longitude });
 
       // Reverse geocode to get address
+      setIsGeocoding(true); // Start loading
       const address = await reverseGeocode(latitude, longitude);
       if (address) {
         setPickupAddress(address);
+      }
+      setIsGeocoding(false); // End loading
+
+      // Update map marker
+      setMapMarker({ latitude, longitude });
+
+      // Center the map on user location
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude,
+          longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
       }
     } catch (error) {
       Alert.alert('Error', error.message);
@@ -130,38 +162,101 @@ const ClientInputScreen = ({ navigation, route }) => {
 
   const handleMapPress = (e) => {
     const { latitude, longitude } = e.nativeEvent.coordinate;
-    setLocation({ coords: { latitude, longitude } });
+    setMapMarker({ latitude, longitude });
     setCoordinates({ latitude, longitude });
 
     // Reverse geocode to get address
+    setIsGeocoding(true); // Start loading
     reverseGeocode(latitude, longitude).then((address) => {
       if (address) {
         setPickupAddress(address);
       }
+      setIsGeocoding(false); // End loading
     });
+
+    // Center the map on the selected location
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude,
+        longitude,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
+    }
   };
 
-  const handleAddressChange = async (address) => {
-    setPickupAddress(address);
-    const coords = await geocodeAddress(address);
+  // Handle address input blur
+  const handleAddressBlur = async () => {
+    if (pickupAddress.trim() === '') return; // Do nothing if address is empty
+
+    setIsGeocoding(true); // Start loading
+    const coords = await geocodeAddress(pickupAddress);
     if (coords) {
       setCoordinates(coords);
       setLocation({ coords });
+      // Update map marker
+      setMapMarker(coords);
+
+      // Center the map on the new coordinates
+      if (mapRef.current) {
+        mapRef.current.animateToRegion({
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+          latitudeDelta: 0.05,
+          longitudeDelta: 0.05,
+        }, 1000);
+      }
+    }
+    setIsGeocoding(false); // End loading
+  };
+
+  // Handle coordinates input blur
+  const handleCoordinatesBlur = async () => {
+    const { latitude, longitude } = coordinates;
+    if (latitude === '' || longitude === '') return; // Do nothing if coordinates are empty
+
+    // Validate if latitude and longitude are valid numbers
+    const lat = parseFloat(latitude);
+    const lon = parseFloat(longitude);
+    if (isNaN(lat) || isNaN(lon)) {
+      Alert.alert('Invalid Coordinates', 'Please enter valid numerical coordinates.');
+      return;
+    }
+
+    setLocation({ coords: { latitude: lat, longitude: lon } });
+
+    // Reverse geocode to get address
+    setIsGeocoding(true); // Start loading
+    const address = await reverseGeocode(lat, lon);
+    if (address) {
+      setPickupAddress(address);
+    }
+    setIsGeocoding(false); // End loading
+
+    // Update map marker
+    setMapMarker({ latitude: lat, longitude: lon });
+
+    // Center the map on the new coordinates
+    if (mapRef.current) {
+      mapRef.current.animateToRegion({
+        latitude: lat,
+        longitude: lon,
+        latitudeDelta: 0.05,
+        longitudeDelta: 0.05,
+      }, 1000);
     }
   };
 
-  const handleCoordinatesChange = async (coordsString) => {
-    const [latitude, longitude] = coordsString.split(',').map(coord => parseFloat(coord.trim()));
-    if (!isNaN(latitude) && !isNaN(longitude)) {
-      setCoordinates({ latitude, longitude });
-      setLocation({ coords: { latitude, longitude } });
+  const handleAddressChange = (text) => {
+    setPickupAddress(text);
+    // No immediate geocoding
+  };
 
-      // Reverse geocode to get address
-      const address = await reverseGeocode(latitude, longitude);
-      if (address) {
-        setPickupAddress(address);
-      }
-    }
+  const handleCoordinatesChange = (text) => {
+    // Expecting input as "latitude, longitude"
+    const [lat, lon] = text.split(',').map(coord => coord.trim());
+    setCoordinates({ latitude: lat, longitude: lon });
+    // No immediate reverse geocoding
   };
 
   const handleCreateDelivery = async () => {
@@ -169,13 +264,13 @@ const ClientInputScreen = ({ navigation, route }) => {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
-  
+
     let coords = location ? location.coords : null;
     if (!coords) {
       coords = await geocodeAddress(pickupAddress);
       if (!coords) return;
     }
-  
+
     const newDelivery = {
       pickupAddress,
       deliveryDetails,
@@ -187,7 +282,7 @@ const ClientInputScreen = ({ navigation, route }) => {
       routeId: routeId || null, // Associate with route if routeId is provided
       status: 'pending', // Optional: Add status field
     };
-  
+
     try {
       const deliveryRef = ref(db, 'deliveries');
       const newRef = push(deliveryRef); // Generates a unique key
@@ -233,15 +328,33 @@ const ClientInputScreen = ({ navigation, route }) => {
       </TouchableOpacity>
 
       {showMap && (
-        <MapView style={styles.map} onPress={handleMapPress}>
-          {location && (
-            <Marker 
-              key={`selectedLocation-${location.coords.latitude}-${location.coords.longitude}`} 
-              coordinate={location.coords} 
-              title="Selected Location" 
+        <MapView
+          ref={mapRef} // Attach the ref to MapView
+          style={styles.map}
+          onPress={handleMapPress}
+          initialRegion={{
+            latitude: mapMarker ? mapMarker.latitude : 37.78825,
+            longitude: mapMarker ? mapMarker.longitude : -122.4324,
+            latitudeDelta: 0.0922,
+            longitudeDelta: 0.0421,
+          }}
+        >
+          {mapMarker && (
+            <Marker
+              key={`selectedLocation-${mapMarker.latitude}-${mapMarker.longitude}`}
+              coordinate={mapMarker}
+              title="Selected Location"
             />
           )}
         </MapView>
+      )}
+
+      {/* Loading Indicator */}
+      {isGeocoding && (
+        <View style={styles.loadingOverlay}>
+          <ActivityIndicator size="large" color="#0000ff" />
+          <Text>Processing Address...</Text>
+        </View>
       )}
 
       {/* Pickup Address */}
@@ -250,16 +363,20 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter pickup address"
         value={pickupAddress}
-        onChangeText={handleAddressChange} // Correct usage, receives text directly
+        onChangeText={handleAddressChange} // Only updates state
+        onBlur={handleAddressBlur} // Triggers geocoding on blur
       />
 
       {/* Coordinates */}
-      <Text style={styles.label}>Or coordinates (written as: Latitude, Longitude)</Text>
+      <Text style={styles.label}>
+        Or coordinates (written as: Latitude, Longitude)
+      </Text>
       <TextInput
         style={styles.input}
-        placeholder="Coordinates"
+        placeholder="e.g., 55.85193, 12.566337"
         value={`${coordinates.latitude}, ${coordinates.longitude}`}
-        onChangeText={handleCoordinatesChange} // Correct usage, receives text directly
+        onChangeText={handleCoordinatesChange} // Only updates state
+        onBlur={handleCoordinatesBlur} // Triggers reverse geocoding on blur
       />
 
       {/* Delivery Details */}
@@ -268,7 +385,7 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter delivery details"
         value={deliveryDetails}
-        onChangeText={setDeliveryDetails} // Correct usage, receives text directly
+        onChangeText={setDeliveryDetails}
       />
 
       {/* Weight */}
@@ -277,7 +394,7 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter weight"
         value={weight}
-        onChangeText={setWeight} // Correct usage, receives text directly
+        onChangeText={setWeight}
         keyboardType="numeric"
       />
 
@@ -287,7 +404,7 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter height"
         value={height}
-        onChangeText={setHeight} // Correct usage, receives text directly
+        onChangeText={setHeight}
         keyboardType="numeric"
       />
 
@@ -297,7 +414,7 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter width"
         value={width}
-        onChangeText={setWidth} // Correct usage, receives text directly
+        onChangeText={setWidth}
         keyboardType="numeric"
       />
 
@@ -307,7 +424,7 @@ const ClientInputScreen = ({ navigation, route }) => {
         style={styles.input}
         placeholder="Enter length"
         value={length}
-        onChangeText={setLength} // Correct usage, receives text directly
+        onChangeText={setLength}
         keyboardType="numeric"
       />
 
@@ -353,6 +470,17 @@ const styles = StyleSheet.create({
     color: '#007BFF',
     textAlign: 'center',
     marginBottom: 20,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0, // Removed 'showMap' dependency
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.8)',
+    zIndex: 2,
   },
 });
 

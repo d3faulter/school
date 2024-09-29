@@ -73,21 +73,28 @@ const AppNavigator = () => {
   useEffect(() => {
     const auth = getAuth();
     const db = getDatabase();
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       if (currentUser) {
         const userRoleRef = ref(db, `users/${currentUser.uid}/role`);
-        onValue(userRoleRef, (snapshot) => {
+        
+        // Set up a real-time listener without 'onlyOnce'
+        const unsubscribeRole = onValue(userRoleRef, (snapshot) => {
           const userRole = snapshot.val();
           setRole(userRole);
-        }, {
-          onlyOnce: true,
         });
+
+        // Cleanup role listener when user changes or component unmounts
+        return () => {
+          unsubscribeRole();
+        };
       } else {
         setRole(null);
       }
     });
-    return unsubscribe;
+
+    return unsubscribeAuth;
   }, []);
 
   return (
