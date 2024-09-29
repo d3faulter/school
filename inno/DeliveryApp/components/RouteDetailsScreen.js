@@ -2,6 +2,7 @@
 import React from 'react';
 import { View, Text, StyleSheet, Button, Alert } from 'react-native';
 import MapView, { Marker } from 'react-native-maps';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ref, update } from 'firebase/database';
 import { database } from '../firebaseConfig';
 
