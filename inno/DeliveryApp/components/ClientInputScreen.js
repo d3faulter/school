@@ -163,6 +163,9 @@ const ClientInputScreen = ({ navigation, route }) => {
     setMapMarker({ latitude, longitude });
     setCoordinates({ latitude, longitude });
 
+    // Update location state with the selected coordinates
+    setLocation({ coords: { latitude, longitude } });
+
     // Reverse geocode to get address
     setIsGeocoding(true); // Start loading
     reverseGeocode(latitude, longitude).then((address) => {

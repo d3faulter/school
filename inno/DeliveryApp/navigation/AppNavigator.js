@@ -13,7 +13,7 @@ import { getDatabase, ref, onValue } from 'firebase/database';
 import ClientInputScreen from '../components/ClientInputScreen';
 import MapScreen from '../components/MapScreen';
 import TruckerInputScreen from '../components/TruckerInputScreen';
-import RouteDetailsScreen from '../components/RouteDetailsScreen';
+import RouteDetailsScreen from '../components/DeliveryDetailsScreen';
 import RoutesScreen from '../components/RoutesScreen';
 import LoginScreen from '../components/LoginScreen';
 import RegisterScreen from '../components/RegisterScreen';
