@@ -1,8 +1,8 @@
 ## Opsætning
 
-1. Kør `npm install` i roden af projektet for at installere alle nødvendige afhængigheder.
+1. Kør `npm install` i root for at installere alle dependencies.
 
-2. Opret en `.env`-fil i roden af projektet med følgende format:
+2. Opret en `.env`-fil i root med følgende format (kræver man har realtime database og authentication sat op i Firebase samt en api-nøgle til  [GeoCode Free Api](https://geocode.maps.co/) ):
 
     ```plaintext
     FIREBASE_API_KEY=
@@ -17,4 +17,4 @@
 
 3. Start projektet med `npx expo`. Hvis du oplever problemer, kan det hjælpe at rydde cachen ved opstart. Brug evt. `npm start --reset-cache`, da der har været enkelte problemer med Expo CLI.
 
-> **Bemærk:** Ja, det er et nested repository. Nej, det er ikke ideelt. Applikationen vil blive flyttet til et andet repository asap.
+> **Bemærk:** Ja, det er et nested repository. Nej, det er ikke fedt. Det bliver rykket i andet repository asap.
