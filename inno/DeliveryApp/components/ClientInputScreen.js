@@ -6,7 +6,7 @@ import axios from 'axios';
 import * as Location from 'expo-location';
 import Constants from 'expo-constants';
 import MapView, { Marker } from 'react-native-maps';
-import { getDatabase, ref, push } from 'firebase/database';
+import { getDatabase, ref, push, set } from 'firebase/database';
 import { GEOCODE_MAPS_APIKEY } from '../firebaseConfig';
 
 // Utility function for reverse geocoding
@@ -19,8 +19,6 @@ const reverseGeocode = async (latitude, longitude) => {
         api_key: GEOCODE_MAPS_APIKEY,
       },
     });
-
-    console.log('Reverse Geocode Response:', response.data);
 
     if (response.data && response.data.display_name) {
       return response.data.display_name;
@@ -44,8 +42,6 @@ const geocodeAddress = async (address) => {
         api_key: GEOCODE_MAPS_APIKEY,
       },
     });
-
-    console.log('Geocode Response:', response.data);
 
     if (response.data && response.data.length > 0) {
       const { lat, lon } = response.data[0];
@@ -137,15 +133,14 @@ const ClientInputScreen = ({ navigation }) => {
       Alert.alert('Error', 'Please fill in all fields.');
       return;
     }
-
+  
     let coords = location ? location.coords : null;
     if (!coords) {
       coords = await geocodeAddress(pickupAddress);
       if (!coords) return;
     }
-
+  
     const newDelivery = {
-      id: Date.now().toString(),
       pickupAddress,
       deliveryDetails,
       weight: parseFloat(weight),
@@ -154,11 +149,12 @@ const ClientInputScreen = ({ navigation }) => {
       length: parseFloat(length),
       location: coords,
     };
-
+  
     try {
       const db = getDatabase();
       const deliveryRef = ref(db, 'deliveries');
-      await push(deliveryRef, newDelivery);
+      const newRef = push(deliveryRef); // Generates a unique key
+      await set(newRef, newDelivery); // Saves the delivery data under the unique key
       Alert.alert('Success', 'Delivery created successfully.');
       navigation.navigate('Map');
     } catch (error) {
@@ -181,9 +177,13 @@ const ClientInputScreen = ({ navigation }) => {
 
       {showMap && (
         <MapView style={styles.map} onPress={handleMapPress}>
-          {location && (
-            <Marker coordinate={location.coords} title="Selected Location" />
-          )}
+{location && (
+  <Marker 
+    key={`selectedLocation-${location.coords.latitude}-${location.coords.longitude}`} 
+    coordinate={location.coords} 
+    title="Selected Location" 
+  />
+)}
         </MapView>
       )}
 

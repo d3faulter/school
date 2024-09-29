@@ -11,7 +11,6 @@ const LoginScreen = ({ navigation }) => {
     const auth = getAuth();
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      navigation.replace('Map'); // Navigate to the main screen after login
     } catch (error) {
       Alert.alert('Login Error', error.message);
     }
@@ -20,15 +19,17 @@ const LoginScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Login</Text>
+      <Text>Email</Text>
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="Enter your email"
         value={email}
         onChangeText={setEmail}
       />
+      <Text>Password</Text>
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Enter your password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
@@ -42,7 +43,7 @@ const LoginScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20 },
   title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, paddingHorizontal: 10 },
+  input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, paddingHorizontal: 10, borderRadius: 5},
 });
 
 export default LoginScreen;

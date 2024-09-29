@@ -14,8 +14,9 @@ import {
 import Slider from '@react-native-community/slider';
 import { ref, onValue, update } from 'firebase/database';
 import { auth, database } from '../firebaseConfig';
+import { signOut } from 'firebase/auth';
 
-const ProfileScreen = () => {
+const ProfileScreen = ({ navigation }) => {
   // State variables for user preferences
   const [truckType, setTruckType] = useState('');
   const [fuelEconomy, setFuelEconomy] = useState('');
@@ -104,6 +105,36 @@ const ProfileScreen = () => {
     }
   };
 
+  // Function to handle user logout
+  const handleLogout = () => {
+    Alert.alert(
+      'Confirm Logout',
+      'Are you sure you want to log out?',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        { 
+          text: 'Logout', 
+          style: 'destructive',
+          onPress: () => {
+            signOut(auth)
+              .then(() => {
+                Alert.alert('Logged Out', 'You have been logged out successfully.');
+                // Navigation handled by auth state listener
+              })
+              .catch((error) => {
+                console.error('Logout Error:', error);
+                Alert.alert('Logout Error', error.message);
+              });
+          }
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
   // Display a loading indicator while fetching data
   if (loading) {
     return (
@@ -138,7 +169,7 @@ const ProfileScreen = () => {
       />
 
       {/* Cargo Space */}
-      <Text style={styles.label}>Cargo Space (m^3)</Text>
+      <Text style={styles.label}>Cargo Space (m³)</Text>
       <TextInput
         style={styles.input}
         placeholder="Enter cargo space"
@@ -186,6 +217,11 @@ const ProfileScreen = () => {
 
       {/* Save Preferences Button */}
       <Button title="Update Preferences" onPress={savePreferences} />
+
+      {/* Logout Button */}
+      <View style={styles.logoutButtonContainer}>
+        <Button title="Logout" onPress={handleLogout} color="#FF3B30" />
+      </View>
     </ScrollView>
   );
 };
@@ -220,13 +256,18 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     marginBottom: 20, 
     paddingHorizontal: 10, 
-borderRadius: 5,
+    borderRadius: 5,
     backgroundColor: '#fff',
   },
   slider: {
     width: '100%',
     height: 40,
     marginBottom: 20,
+  },
+  logoutButtonContainer: {
+    marginTop: 30,
+    alignSelf: 'center',
+    width: '60%',
   },
 });
 

@@ -40,13 +40,14 @@ const RouteDetailsScreen = ({ route, navigation }) => {
       <MapView style={styles.map}>
         {/* Display pickup location */}
         <Marker
-          coordinate={{
-            latitude: delivery.location ? delivery.location.latitude : 0,
-            longitude: delivery.location ? delivery.location.longitude : 0,
-          }}
-          title={delivery.deliveryDetails}
-          description={delivery.address}
-        />
+  key={delivery.id} // Ensure delivery.id is unique
+  coordinate={{
+    latitude: delivery.location ? delivery.location.latitude : 0,
+    longitude: delivery.location ? delivery.location.longitude : 0,
+  }}
+  title={delivery.deliveryDetails}
+  description={delivery.address}
+/>
         {/* You can add more markers or polylines as needed */}
       </MapView>
       <View style={styles.details}>

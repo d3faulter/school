@@ -17,7 +17,6 @@ const RegisterScreen = ({ navigation }) => {
     const auth = getAuth();
     try {
       await createUserWithEmailAndPassword(auth, email, password);
-      navigation.replace('Map'); // Navigate to the main screen after registration
     } catch (error) {
       Alert.alert('Registration Error', error.message);
     }
@@ -26,26 +25,33 @@ const RegisterScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Register</Text>
+      
+      <Text>Email</Text>
       <TextInput
         style={styles.input}
-        placeholder="Email"
+        placeholder="Enter your email"
         value={email}
         onChangeText={setEmail}
       />
+      
+      <Text>Password</Text>
       <TextInput
         style={styles.input}
-        placeholder="Password"
+        placeholder="Enter your password"
         value={password}
         onChangeText={setPassword}
         secureTextEntry
       />
+      
+      <Text>Repeat Password</Text>
       <TextInput
         style={styles.input}
-        placeholder="Confirm Password"
+        placeholder="Confirm your password"
         value={confirmPassword}
         onChangeText={setConfirmPassword}
         secureTextEntry
       />
+      
       <Button title="Register" onPress={handleRegister} />
     </View>
   );
@@ -54,7 +60,7 @@ const RegisterScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: 'center', padding: 20 },
   title: { fontSize: 24, marginBottom: 20, textAlign: 'center' },
-  input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, paddingHorizontal: 10 },
+  input: { height: 40, borderColor: 'gray', borderWidth: 1, marginBottom: 20, paddingHorizontal: 10, borderRadius: 5 },
 });
 
 export default RegisterScreen;

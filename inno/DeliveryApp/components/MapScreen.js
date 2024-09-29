@@ -19,12 +19,13 @@ const MapScreen = ({ navigation }) => {
           id: key,
           ...data[key],
         }));
+        console.log('Formatted Deliveries:', formattedDeliveries); // Debugging line
         setDeliveries(formattedDeliveries);
       } else {
         setDeliveries([]);
       }
     });
-
+  
     return () => unsubscribe();
   }, []);
 
